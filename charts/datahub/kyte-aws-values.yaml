@@ -1,0 +1,119 @@
+# Values to start up datahub after starting up the datahub-prerequisites chart with "prerequisites" release name
+# Copy this chart and change configuration as needed.
+datahub-gms:
+  enabled: true
+
+datahub-frontend:
+  enabled: true
+  # Set up ingress to expose react front-end
+  extraVolumes:
+      - name: datahub-users
+        secret:
+          defaultMode: 0444
+          secretName:  datahub-users-secret
+  extraVolumeMounts:
+      - name: datahub-users
+        mountPath: /datahub-frontend/conf/user.props
+        subPath: user.props
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: instance
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:296763793487:certificate/f2894a98-2522-49fc-88c5-b750f36c2792
+      alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+      alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    hosts:
+      - host: datahub.dev.kyte-internal.com
+        redirectPaths:
+          - path: /*
+            name: ssl-redirect
+            port: use-annotation
+        paths:
+          - /*
+
+acryl-datahub-actions:
+  enabled: true
+
+datahub-mae-consumer:
+  image:
+    repository: linkedin/datahub-mae-consumer
+    # tag: "v0.10.0" # defaults to .global.datahub.version
+  resources:
+    limits:
+      memory: 1536Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+datahub-mce-consumer:
+  image:
+    repository: linkedin/datahub-mce-consumer
+    # tag: "v0.10.0" # defaults to .global.datahub.version
+  resources:
+    limits:
+      memory: 1536Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+datahub-ingestion-cron:
+  enabled: false
+  image:
+    repository: acryldata/datahub-ingestion
+    # tag: "v0.10.0" # defaults to .global.datahub.version
+
+elasticsearchSetupJob:
+  enabled: false
+  extraEnvs:
+    - name: USE_AWS_ELASTICSEARCH
+      value: "true"
+
+kafkaSetupJob:
+  enabled: false
+
+mysqlSetupJob:
+  enabled: false
+
+## No code data migration
+datahubUpgrade:
+  enabled: false
+
+
+global:
+  elasticsearch:
+    host: "vpc-data-analytics-dev-mwnw6d4rrhlzpub6z5we4znuxe.us-east-1.es.amazonaws.com"
+    port: "443"
+    useSSL: "true"
+    region: us-east-1
+
+  kafka:
+    bootstrap:
+      server: "b-2.geostore-dev.hg1vbj.c25.kafka.us-east-1.amazonaws.com:9092,b-1.geostore-dev.hg1vbj.c25.kafka.us-east-1.amazonaws.com:9092,b-3.geostore-dev.hg1vbj.c25.kafka.us-east-1.amazonaws.com:9092"
+    zookeeper:
+      server: "z-3.geostore-dev.hg1vbj.c25.kafka.us-east-1.amazonaws.com:2181,z-2.geostore-dev.hg1vbj.c25.kafka.us-east-1.amazonaws.com:2181,z-1.geostore-dev.hg1vbj.c25.kafka.us-east-1.amazonaws.com:2181"
+    schemaregistry:
+      # GMS Implementation - `url` configured based on component context
+      type: INTERNAL
+
+
+  sql:
+    datasource:
+      host: "datahub-dev.c36v6kifbrw9.us-east-1.rds.amazonaws.com:3306"
+      hostForMysqlClient: "datahub-dev.c36v6kifbrw9.us-east-1.rds.amazonaws.com"
+      port: "3306"
+      url: "jdbc:mysql://datahub-dev.c36v6kifbrw9.us-east-1.rds.amazonaws.com:3306/datahub?verifyServerCertificate=false&useSSL=true&useUnicode=yes&enabledTLSProtocols=TLSv1.2"
+      # url: "jdbc:mysql://datahub-dev.c36v6kifbrw9.us-east-1.rds.amazonaws.com:3306/datahub?verifyServerCertificate=false&useSSL=true&useUnicode=yes&characterEncoding=UTF-8&enabledTLSProtocols=TLSv1.2"
+      driver: "com.mysql.cj.jdbc.Driver"
+      username: "root"
+      password:
+        # secretRef: mysql-secrets
+        # secretKey: mysql-root-password
+        value: GUOcUI8IyCxCJxI9W0zS
+      # --------------OR----------------
+
+  datahub:
+    metadata_service_authentication:
+      enabled: false
